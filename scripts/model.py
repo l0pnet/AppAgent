@@ -23,7 +23,7 @@ def ask_gpt4v(content):
         "temperature": configs["TEMPERATURE"],
         "max_tokens": configs["MAX_TOKENS"]
     }
-    response = requests.post(configs["OPENAI_API_BASE"], headers=headers, json=payload)
+    response = requests.post(configs["OPENAI_API_BASE"], headers=headers, json=payload, proxies=configs["PROXY"])
     if "error" not in response.json():
         usage = response.json()["usage"]
         prompt_tokens = usage["prompt_tokens"]

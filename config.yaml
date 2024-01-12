@@ -1,5 +1,5 @@
 OPENAI_API_BASE: "https://api.openai.com/v1/chat/completions"
-OPENAI_API_KEY: "sk-"  # Set the value to sk-xxx if you host the openai interface for open llm model
+OPENAI_API_KEY: "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"  # Set the value to sk-xxx if you host the openai interface for open llm model
 OPENAI_API_MODEL: "gpt-4-vision-preview"  # The only OpenAI model by now that accepts visual input
 MAX_TOKENS: 300  # The max token limit for the response completion
 TEMPERATURE: 0.0  # The temperature of the model: the lower the value, the more consistent the output of the model
@@ -12,3 +12,7 @@ DOC_REFINE: false  # Set this to true will make the agent refine existing docume
 MAX_ROUNDS: 20  # Set the round limit for the agent to complete the task
 DARK_MODE: false  # Set this to true if your app is in dark mode to enhance the element labeling
 MIN_DIST: 30  # The minimum distance between elements to prevent overlapping during the labeling process
+
+PROXY:
+  HTTP_PROXY: "socks5h://127.0.0.1:1090"
+  HTTPS_PROXY: "socks5h://127.0.0.1:1090"

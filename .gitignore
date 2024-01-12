@@ -1,0 +1,7 @@
+__pycache__/
+__pycache__/*
+apps/
+apps/*
+.conda/
+.vscode/
+qq_friends_explorer/

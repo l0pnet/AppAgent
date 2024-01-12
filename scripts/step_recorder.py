@@ -110,7 +110,8 @@ while True:
     labeled_img = draw_bbox_multi(screenshot_path, os.path.join(labeled_ss_dir, f"{demo_name}_{step}.png"), elem_list,
                                   True)
     cv2.imshow("image", labeled_img)
-    cv2.waitKey(0)
+    cv2.waitKey(10)
+    input("Press Enter to continue...")
     cv2.destroyAllWindows()
     user_input = "xxx"
     print_with_color("Choose one of the following actions you want to perform on the current screen:\ntap, text, long "
