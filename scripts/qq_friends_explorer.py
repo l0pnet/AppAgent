@@ -276,8 +276,8 @@ class QQFriendsExplorer:
             cycle += 1
 
         # 回到顶部
-        # ret = self.controller.swipe(x, y, "down", "long", True)
-        # time.sleep(1)
+        ret = self.controller.swipe(x, y, "down", "long", True)
+        time.sleep(1)
 
         # 如果前期没有找到QQ号，则再次尝试
         if not qq_num:
