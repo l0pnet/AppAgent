@@ -224,9 +224,10 @@ class QQFriendsExplorer:
             if "QQ号" in content:
                 qq_num = re.findall(r"\d+", content)[0]
                 return qq_num
-            # 或者一串纯数字，长度大于7
-            if re.match(r"^\d{7,}$", content):
-                return content
+            # 或者一串纯数字，长度大于6
+            if re.match(r"\d{6,}", content):
+                qq_num = re.findall(r"\d+", content)[0]
+                return qq_num
         return ""
     
     def raise_if_qq_number_exists(self, qq_num):
@@ -554,6 +555,7 @@ if __name__ == "__main__":
     print_with_color("=======================================================", "yellow")
     # 循环max_try_times次
     max_try_times = 10
+    sleep_time = 30
     for i in range(max_try_times):
         qq_friends_explorer.start_exploring()
         qq_friends_explorer.reset_explored_friends()
@@ -561,8 +563,8 @@ if __name__ == "__main__":
         if qq_friends_explorer.get_try_friend_repetitive_count() > 100:
             print_with_color(f"尝试获取的QQ大多数已经存在数据库中，退出", "yellow")
             break
-        print_with_color(f"第{i+1}轮探索完成，休息3秒", "yellow")
-        time.sleep(3)
+        print_with_color(f"第{i+1}轮探索完成，休息{sleep_time}秒", "yellow")
+        time.sleep(sleep_time)
     
 
 
