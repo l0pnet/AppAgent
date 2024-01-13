@@ -66,6 +66,37 @@ class QQFriendsExplorer:
         return self.try_get_friend_count
 
     ############################################
+    # 函数：tap一个符合条件的元素
+    # @attrib: 元素属性, 如resource-id\text\content-desc等
+    # @conditions: 元素属性值
+    # @return: 点击成功返回True，否则返回False
+    def tap_element(self, attrib, conditions):
+        try:
+            # 获得xml
+            xml_path = self.read_xml()
+            if xml_path == "ERROR":
+                print_with_color("ERROR: 读取xml失败！", "red")
+                return False
+
+            # 查找text为“查找”的元素
+            elem_list = []
+            self.find_elements(xml_path, elem_list, attrib, conditions)
+            if not elem_list:
+                print_with_color("ERROR: No element found!", "red")
+                return False
+            
+            # 点击查找按钮
+            x,y = self.get_element_center(elem_list[0])
+            ret = self.controller.tap(x, y)
+            if ret == "ERROR":
+                print_with_color("ERROR: 点击查找按钮失败！", "red")
+                return False
+            return True
+        except Exception as e:
+            print_with_color(f"ERROR: 点击查找按钮失败！{e}", "red")
+            return False
+        
+    ############################################
     # 函数：查找符合条件的元素
     # @param xml_path: xml文件路径
     # @param elem_list: 元素列表
@@ -374,6 +405,43 @@ class QQFriendsExplorer:
             self.controller.back()
             time.sleep(1)
             return
+        
+    ############################################
+    # 函数：初始化到准备查找QQ好友的页面
+    def init_to_find_qq_friends(self):
+        try:
+            # 重启qq
+            # stop qq: adb shell am force-stop com.tencent.mobileqq
+            execute_adb(f"adb -s {self.device_name} shell am force-stop com.tencent.mobileqq")
+            time.sleep(1)
+            # adb shell am start -n com.tencent.mobileqq/.activity.SplashActivity
+            execute_adb(f"adb -s {self.device_name} shell am start -n com.tencent.mobileqq/.activity.SplashActivity")
+            time.sleep(1)
+
+            # 点击加号
+            # 快捷入口 resource_id=com.tencent.mobileqq:id/ba3(点+号)
+            ret = self.tap_element("resource-id", "com.tencent.mobileqq:id/ba3")
+            if not ret:
+                print_with_color("ERROR: 点击加号失败！", "red")
+                raise Exception("ERROR: 点击加号失败！")
+            time.sleep(1)
+
+            # text="加好友/群"（点击加好友/群）
+            ret = self.tap_element("text", "加好友/群")
+            if not ret:
+                print_with_color("ERROR: 点击加好友/群失败！", "red")
+                raise Exception("ERROR: 点击加好友/群失败！")
+            time.sleep(1)
+
+            # text="条件查找"（点击条件查找）
+            ret = self.tap_element("text", "条件查找")
+            if not ret:
+                print_with_color("ERROR: 点击条件查找失败！", "red")
+                raise Exception("ERROR: 点击条件查找失败！")
+            time.sleep(1)
+        except Exception as e:
+            print_with_color(f"ERROR: 初始化到准备查找QQ好友的页面失败！{e}", "red")
+            exit(1)
 
     ############################################
     # 函数：获取当前橱窗的好友信息
@@ -550,7 +618,7 @@ if __name__ == "__main__":
         os.mkdir(job_dir)
 
     # 获得QQ好友信息
-    explore_condition = "女|18-26岁|所在地:广西-南宁-兴宁区"
+    explore_condition = "女|18-26岁|所在地:广西-南宁-青秀区"
     qq_friends_explorer = QQFriendsExplorer(device_name, job_dir, explore_condition)
     print_with_color("=======================================================", "yellow")
     print_with_color(f"开始探索QQ好友信息, 查询条件: {explore_condition}", "yellow")
@@ -559,6 +627,8 @@ if __name__ == "__main__":
     max_try_times = 10
     sleep_time = 30
     for i in range(max_try_times):
+        qq_friends_explorer.init_to_find_qq_friends()
+        time.sleep(5)
         qq_friends_explorer.start_exploring()
         qq_friends_explorer.reset_explored_friends()
         # 如果尝试获取的QQ大多数已经存在数据库中，则退出
@@ -567,7 +637,3 @@ if __name__ == "__main__":
             break
         print_with_color(f"第{i+1}轮探索完成，休息{sleep_time}秒", "yellow")
         time.sleep(sleep_time)
-    
-
-
-
