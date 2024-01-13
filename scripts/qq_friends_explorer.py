@@ -624,7 +624,7 @@ if __name__ == "__main__":
     print_with_color(f"开始探索QQ好友信息, 查询条件: {explore_condition}", "yellow")
     print_with_color("=======================================================", "yellow")
     # 循环max_try_times次
-    max_try_times = 10
+    max_try_times = 300
     sleep_time = 30
     for i in range(max_try_times):
         qq_friends_explorer.init_to_find_qq_friends()
