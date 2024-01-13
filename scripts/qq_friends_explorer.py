@@ -360,9 +360,9 @@ class QQFriendsExplorer:
                 raise Exception("ERROR: 读取图片失败！")
             
             # 显示图片
-            cv2.imshow("image", image)
-            cv2.waitKey(100)
-            cv2.destroyAllWindows()
+            # cv2.imshow("image", image)
+            # cv2.waitKey(100)
+            # cv2.destroyAllWindows()
             # 返回
             ret = self.controller.back()
             time.sleep(1)
