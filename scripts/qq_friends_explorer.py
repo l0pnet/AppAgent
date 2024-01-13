@@ -237,53 +237,10 @@ class QQFriendsExplorer:
         if not qq_num:
             print_with_color("ERROR: 未找到QQ号！", "red")
             return
-        else:
-            print_with_color(f"正在读取好友\"{friend_nickname}\"(QQ:{qq_num})的头像", "yellow")
-            # 重新读取xml
-            xml_path = self.read_xml()
+        
+        # 获得QQ好友头像
+        self.get_friend_avatar(friend_nickname, qq_num)
 
-            # 获取查看大头像 elment_id=com.tencent.mobileqq:id/dk3 的元素
-            elem_list = []
-            self.find_elements(xml_path, elem_list, "resource-id", "com.tencent.mobileqq:id/dk3")
-            if not elem_list:
-                time.sleep(1)
-                print_with_color("ERROR: No element found!", "red")
-                return
-            
-            # 获得元素x, y坐标
-            x, y = self.get_element_center(elem_list[0])
-            # 点击查看大头像
-            print_with_color(f"点击查看大头像：{x}, {y}", "yellow")
-            ret = self.controller.tap(x, y)
-            if ret == "ERROR":
-                print_with_color("ERROR: 点击查看大头像失败！", "red")
-                return
-            # 休息1秒等待页面加载完成
-            time.sleep(1)
-            # 获得xml
-            xml_path = self.read_xml()
-            # 查找resource-id="com.tencent.mobileqq:id/image"的元素列表
-            elem_list = []
-            self.find_elements(xml_path, elem_list, "resource-id", "com.tencent.mobileqq:id/image")
-            if not elem_list:
-                print_with_color("ERROR: No element found!", "red")
-                return
-            # 读取图片
-            prefix = f"{qq_num}"
-            image = self.read_element_image(elem_list[0], prefix, self.png_save_dir)
-            if isinstance(image, bool) and image == False:
-                print_with_color("ERROR: 读取图片失败！", "red")
-                # 返回
-                self.controller.back()
-                time.sleep(1)
-                return
-            # 显示图片
-            cv2.imshow("image", image)
-            cv2.waitKey(100)
-            cv2.destroyAllWindows()
-            # 返回
-            ret = self.controller.back()
-            time.sleep(1)
         # 构造打印信息
         friend_info_text = "\n".join(content_list)
         return {
@@ -293,6 +250,53 @@ class QQFriendsExplorer:
         
     ############################################
     # 函数：获得QQ好友头像
+    def get_friend_avatar(self, friend_nickname, qq_num):
+        print_with_color(f"正在读取好友\"{friend_nickname}\"(QQ:{qq_num})的头像", "yellow")
+        # 重新读取xml
+        xml_path = self.read_xml()
+
+        # 获取查看大头像 elment_id=com.tencent.mobileqq:id/dk3 的元素
+        elem_list = []
+        self.find_elements(xml_path, elem_list, "resource-id", "com.tencent.mobileqq:id/dk3")
+        if not elem_list:
+            time.sleep(1)
+            print_with_color("ERROR: No element found!", "red")
+            return
+        
+        # 获得元素x, y坐标
+        x, y = self.get_element_center(elem_list[0])
+        # 点击查看大头像
+        print_with_color(f"点击查看大头像：{x}, {y}", "yellow")
+        ret = self.controller.tap(x, y)
+        if ret == "ERROR":
+            print_with_color("ERROR: 点击查看大头像失败！", "red")
+            return
+        # 休息1秒等待页面加载完成
+        time.sleep(1)
+        # 获得xml
+        xml_path = self.read_xml()
+        # 查找resource-id="com.tencent.mobileqq:id/image"的元素列表
+        elem_list = []
+        self.find_elements(xml_path, elem_list, "resource-id", "com.tencent.mobileqq:id/image")
+        if not elem_list:
+            print_with_color("ERROR: No element found!", "red")
+            return
+        # 读取图片
+        prefix = f"{qq_num}"
+        image = self.read_element_image(elem_list[0], prefix, self.png_save_dir)
+        if isinstance(image, bool) and image == False:
+            print_with_color("ERROR: 读取图片失败！", "red")
+            # 返回
+            self.controller.back()
+            time.sleep(1)
+            return
+        # 显示图片
+        cv2.imshow("image", image)
+        cv2.waitKey(100)
+        cv2.destroyAllWindows()
+        # 返回
+        ret = self.controller.back()
+        time.sleep(1)
         
     ############################################
     # 函数：开始探索QQ好友信息
