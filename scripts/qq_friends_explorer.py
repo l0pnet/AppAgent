@@ -416,7 +416,7 @@ class QQFriendsExplorer:
             time.sleep(1)
             # adb shell am start -n com.tencent.mobileqq/.activity.SplashActivity
             execute_adb(f"adb -s {self.device_name} shell am start -n com.tencent.mobileqq/.activity.SplashActivity")
-            time.sleep(1)
+            time.sleep(3)
 
             # 点击加号
             # 快捷入口 resource_id=com.tencent.mobileqq:id/ba3(点+号)
