@@ -225,9 +225,11 @@ class QQFriendsExplorer:
                 qq_num = re.findall(r"\d+", content)[0]
                 return qq_num
             # 或者一串纯数字，长度大于6
-            if re.match(r"\d{6,}", content):
-                qq_num = re.findall(r"\d+", content)[0]
-                return qq_num
+            else:
+                s = re.search(r"\d{6,}", content)
+                if s:
+                    qq_num = s.group(0)
+                    return qq_num
         return ""
     
     def raise_if_qq_number_exists(self, qq_num):
