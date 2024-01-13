@@ -48,6 +48,13 @@ class QQFriendsExplorer:
         self.step = 0
         # 已经探索过的好友，避免重复探索
         self.explored_friends = []
+        self.explored_friends_info = []
+
+    ############################################
+    # 函数：重置已经探索过的好友列表
+    def reset_explored_friends(self):
+        self.explored_friends = []
+        self.explored_friends_info = []
 
     ############################################
     # 函数：查找符合条件的元素
@@ -148,6 +155,9 @@ class QQFriendsExplorer:
 
         # 获得xml
         xml_path = self.read_xml()
+        if xml_path == "ERROR":
+            print_with_color("ERROR: 读取xml失败！", "red")
+            return False
 
         # 查找text为“查找”的元素
         elem_list = []
@@ -170,12 +180,17 @@ class QQFriendsExplorer:
     # @return: 待探索的好友列表
     def get_friend_list(self):
         self.step += 1
+        friend_elem_list = []
+
         print_with_color(f"Step {self.step}: 从页面上获取待探索的好友列表", "blue")
 
         # 获得xml
         xml_path = self.read_xml()
+        if xml_path == "ERROR":
+            print_with_color("ERROR: 读取xml失败！", "red")
+            return friend_elem_list
 
-        friend_elem_list = []
+        
         # 搜索resource-id="com.tencent.mobileqq:id/f9r"的元素列表
         self.find_elements(xml_path, friend_elem_list, "resource-id", "com.tencent.mobileqq:id/f9r")
         if not friend_elem_list:
@@ -213,8 +228,15 @@ class QQFriendsExplorer:
         while(cycle < 2):
             # 获得xml
             xml_path = self.read_xml()
+            if xml_path == "ERROR":
+                print_with_color("ERROR: 读取xml失败！", "red")
+                return
             # 读取全部文本信息
-            self.read_text(xml_path, content_list)
+            try:
+                self.read_text(xml_path, content_list)
+            except:
+                print_with_color("ERROR: 读取文本信息失败！", "red")
+                return
 
             # 往下翻动页面，看是不是能找到更多信息
             # 翻动页面(quickly)
@@ -239,21 +261,31 @@ class QQFriendsExplorer:
             return
         
         # 获得QQ好友头像
-        self.get_friend_avatar(friend_nickname, qq_num)
+        png_save_path = self.get_friend_avatar(friend_nickname, qq_num)
 
         # 构造打印信息
         friend_info_text = "\n".join(content_list)
-        return {
+        friend_info = {
             "qq": qq_num,
-            "introduction": friend_info_text
+            "nickname": friend_nickname,
+            "introduction": friend_info_text,
+            "pic_path": png_save_path
         }
+        self.explored_friends_info.append(friend_info)
+        return friend_info
         
     ############################################
     # 函数：获得QQ好友头像
+    # @param friend_nickname: 好友昵称
+    # @param qq_num: 好友QQ号
+    # @return: 图片的存储路径
     def get_friend_avatar(self, friend_nickname, qq_num):
         print_with_color(f"正在读取好友\"{friend_nickname}\"(QQ:{qq_num})的头像", "yellow")
         # 重新读取xml
         xml_path = self.read_xml()
+        if xml_path == "ERROR":
+            print_with_color("ERROR: 读取xml失败！", "red")
+            return
 
         # 获取查看大头像 elment_id=com.tencent.mobileqq:id/dk3 的元素
         elem_list = []
@@ -273,46 +305,68 @@ class QQFriendsExplorer:
             return
         # 休息1秒等待页面加载完成
         time.sleep(1)
-        # 获得xml
-        xml_path = self.read_xml()
-        # 查找resource-id="com.tencent.mobileqq:id/image"的元素列表
-        elem_list = []
-        self.find_elements(xml_path, elem_list, "resource-id", "com.tencent.mobileqq:id/image")
-        if not elem_list:
-            print_with_color("ERROR: No element found!", "red")
-            return
-        # 读取图片
-        prefix = f"{qq_num}"
-        image = self.read_element_image(elem_list[0], prefix, self.png_save_dir)
-        if isinstance(image, bool) and image == False:
-            print_with_color("ERROR: 读取图片失败！", "red")
+
+        try:
+            # 获得xml
+            xml_path = self.read_xml()
+            if xml_path == "ERROR":
+                print_with_color("ERROR: 读取xml失败！", "red")
+                raise Exception("ERROR: 读取xml失败！")
+                
+            # 查找resource-id="com.tencent.mobileqq:id/image"的元素列表
+            elem_list = []
+            self.find_elements(xml_path, elem_list, "resource-id", "com.tencent.mobileqq:id/image")
+            if not elem_list:
+                print_with_color("ERROR: No element found!", "red")
+                raise Exception("ERROR: No element found!")
+            
+            # 读取图片
+            prefix = f"{qq_num}"
+            image = self.read_element_image(elem_list[0], prefix, self.png_save_dir)
+            if isinstance(image, bool) and image == False:
+                print_with_color("ERROR: 读取图片失败！", "red")
+                raise Exception("ERROR: 读取图片失败！")
+            
+            # 显示图片
+            cv2.imshow("image", image)
+            cv2.waitKey(100)
+            cv2.destroyAllWindows()
+            # 返回
+            ret = self.controller.back()
+            time.sleep(1)
+
+            return f"{self.png_save_dir}/{qq_num}.png"
+        except:
+            print_with_color("ERROR: 读取大头帖失败！", "red")
             # 返回
             self.controller.back()
             time.sleep(1)
             return
-        # 显示图片
-        cv2.imshow("image", image)
-        cv2.waitKey(100)
-        cv2.destroyAllWindows()
-        # 返回
-        ret = self.controller.back()
-        time.sleep(1)
-        
+
     ############################################
-    # 函数：开始探索QQ好友信息
-    def start_exploring(self):
-        # 点击查询QQ好友列表
-        self.query_qq_friends()
+    # 函数：获取当前橱窗的好友信息
+    # @return: 返回获得的好友数量
+    def get_current_window_friend_info(self):
+        count = 0
+        self.step += 1
+        print_with_color(f"Step {self.step}: 获取当前橱窗的好友信息", "blue")
+
         # 从页面上获取待探索的好友列表
+        # 这里已经跳过了已经探索过的好友
         friend_list = self.get_friend_list()
+
         if not friend_list:
             print_with_color("ERROR: No friend found!", "red")
-            return
+            return count
         # 休息1秒等待页面加载完成
         time.sleep(1)
         
         # 遍历好友列表，获得好友信息
         for friend_elem in friend_list:
+            friend_name = friend_elem.attrib["text"]
+            # 无论何种原因，都将好友添加到已探索列表           
+            self.explored_friends.append(friend_name)
+
             # 获得坐标
             x, y = self.get_element_center(friend_elem)
             # 点击好友
@@ -326,30 +380,58 @@ class QQFriendsExplorer:
             time.sleep(1)
 
             # 获得QQ好友信息
-            friend_name = friend_elem.attrib["text"]
             friend_info = self.get_friend_info(friend_name)
             if not friend_info:
                 # back
                 print_with_color("ERROR: 获得QQ好友信息失败！", "red")
-                ret = self.controller.back()
+                self.controller.back()
                 time.sleep(1)
 
                 continue
+            
+            # 如果成功，打印好友信息
             print_with_color(friend_info["introduction"], "yellow")
-
-            # 将好友添加到已探索列表           
-            self.explored_friends.append(friend_name)
             print_with_color(f"好友\"{friend_name}\", QQ: {friend_info['qq']} 探索完成", "yellow")
 
             # back
-            ret = self.controller.back()
-            if ret == "ERROR":
-                print_with_color("ERROR: 返回失败！", "red")
-                continue
+            self.controller.back()
             time.sleep(1)
+
+            # 获得的好友数量+1
+            count += 1
         
         print_with_color("OK!", "green")
-        return True
+        return count
+
+        
+    ############################################
+    # 函数：开始探索QQ好友信息
+    def start_exploring(self):
+        # 点击查询QQ好友列表
+        self.query_qq_friends()
+        # 循环获取下一个橱窗的好友信息
+        while(True):
+            # 获取当前橱窗的好友信息
+            count = self.get_current_window_friend_info()
+            if count == 0:
+                time.sleep(1)
+                break
+
+            # 翻动页面(quickly)
+            print_with_color(f"翻动页面，继续探索下一个橱窗的好友信息", "yellow")
+            width, height = self.controller.get_device_size()
+            x, y = width // 2, height // 2
+            ret = self.controller.swipe(x, y, "up", "long", True)
+            if (ret == "ERROR"):
+                print_with_color("ERROR: 翻动页面失败！", "red")
+                break
+            time.sleep(1)
+            
+        # 返回页面
+        print_with_color("探索完成！", "green")
+        self.controller.back()
+        time.sleep(1)
+
 
 
 def signal_handler(sig, frame):
@@ -380,7 +462,12 @@ if __name__ == "__main__":
 
     # 获得QQ好友信息
     qq_friends_explorer = QQFriendsExplorer(device_name, job_dir)
-    qq_friends_explorer.start_exploring()
+    # 循环3次
+    for i in range(3):
+        qq_friends_explorer.start_exploring()
+        qq_friends_explorer.reset_explored_friends()
+        print_with_color(f"第{i+1}轮探索完成，休息3秒", "yellow")
+        time.sleep(3)
     
 
 
