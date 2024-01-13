@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 from and_controller import list_all_devices, AndroidController, traverse_tree, execute_adb
 from config import load_config
 from utils import print_with_color, draw_bbox_multi
+from qq_friends import QQFriends
 
 
 configs = load_config()
@@ -34,7 +35,7 @@ def get_device_name():
 
 # 类：获得QQ好友信息
 class QQFriendsExplorer:
-    def __init__(self, device_name, save_dir):
+    def __init__(self, device_name, save_dir, explore_condition=""):
         self.device_name = device_name
         self.controller = AndroidController(device_name)
         self.backslash = "\\"
@@ -49,12 +50,20 @@ class QQFriendsExplorer:
         # 已经探索过的好友，避免重复探索
         self.explored_friends = []
         self.explored_friends_info = []
+        # 获得QQ好友数据库
+        self.qq_friends = QQFriends()
+        # 尝试获取已经存在数据库中的QQ好友的次数
+        self.try_get_friend_count = 0
+        self.explore_condition = explore_condition
 
     ############################################
     # 函数：重置已经探索过的好友列表
     def reset_explored_friends(self):
         self.explored_friends = []
         self.explored_friends_info = []
+
+    def get_try_friend_repetitive_count(self):
+        return self.try_get_friend_count
 
     ############################################
     # 函数：查找符合条件的元素
@@ -210,6 +219,22 @@ class QQFriendsExplorer:
         # 返回待探索的好友列表
         return friend_list
 
+    def find_qq_number_from_content_list(self, content_list):
+        for content in content_list:
+            if "QQ号" in content:
+                qq_num = re.findall(r"\d+", content)[0]
+                return qq_num
+            # 或者一串纯数字，长度大于7
+            if re.match(r"^\d{7,}$", content):
+                return content
+        return ""
+    
+    def raise_if_qq_number_exists(self, qq_num):
+        if self.qq_friends.qq_number_exists(qq_num):
+            print_with_color(f"QQ号{qq_num}已经存在数据库中，跳过", "yellow")
+            self.try_get_friend_count += 1
+            raise Exception(f"QQ号{qq_num}已经存在数据库中，跳过")
+    
     ############################################
     # 函数：获得QQ好友信息
     # @param friend_nickname: 好友昵称
@@ -217,6 +242,8 @@ class QQFriendsExplorer:
     def get_friend_info(self, friend_nickname):
         self.step += 1
         print_with_color(f"Step {self.step}: 获得QQ好友信息", "blue")
+        # 打印当前尝试获取已经存在数据库中的QQ好友的次数
+        print_with_color(f"尝试获取已经存在数据库中的QQ好友的次数: {self.try_get_friend_count}", "blue")
 
         # 先获得设备中心坐标
         width, height = self.controller.get_device_size()
@@ -225,40 +252,42 @@ class QQFriendsExplorer:
         print_with_color(f"正在读取好友:\"{friend_nickname}\"的信息", "yellow")
         cycle = 0
         content_list = []
-        while(cycle < 2):
+        qq_num = ""
+        while(cycle < 3):
             # 获得xml
             xml_path = self.read_xml()
             if xml_path == "ERROR":
                 print_with_color("ERROR: 读取xml失败！", "red")
-                return
+                raise Exception("ERROR: 读取xml失败！")
             # 读取全部文本信息
             try:
                 self.read_text(xml_path, content_list)
+                if not qq_num:
+                    qq_num = self.find_qq_number_from_content_list(content_list)
             except:
                 print_with_color("ERROR: 读取文本信息失败！", "red")
-                return
+                raise Exception("ERROR: 读取文本信息失败！")
+            
+            if qq_num:
+                self.raise_if_qq_number_exists(qq_num)
 
             # 往下翻动页面，看是不是能找到更多信息
-            # 翻动页面(quickly)
-            ret = self.controller.swipe(x, y, "up", "long", True)  
-            if (ret == "ERROR"):
-                print_with_color("ERROR: 翻动页面失败！", "red")
-                continue
+            self.controller.swipe(x, y, "up", "long", False)
             cycle += 1
 
         # 回到顶部
-        ret = self.controller.swipe(x, y, "down", "long", True)
-        time.sleep(1)
+        # ret = self.controller.swipe(x, y, "down", "long", True)
+        # time.sleep(1)
 
-        # 在content_list中查找类似 QQ号：3207497515 的信息，并提取QQ号（数字）
-        qq_num = ""
-        for content in content_list:
-            if "QQ号" in content:
-                qq_num = re.findall(r"\d+", content)[0]
-                break
+        # 如果前期没有找到QQ号，则再次尝试
+        if not qq_num:
+            qq_num = self.find_qq_number_from_content_list(content_list)
         if not qq_num:
             print_with_color("ERROR: 未找到QQ号！", "red")
-            return
+            raise Exception("ERROR: 未找到QQ号！")
+        
+        # 判断QQ号是否已经在数据库中存储过，如果是，则直接返回，并增加重试计数器
+        self.raise_if_qq_number_exists(qq_num)
         
         # 获得QQ好友头像
         png_save_path = self.get_friend_avatar(friend_nickname, qq_num)
@@ -380,13 +409,33 @@ class QQFriendsExplorer:
             time.sleep(1)
 
             # 获得QQ好友信息
-            friend_info = self.get_friend_info(friend_name)
-            if not friend_info:
+            try:
+                friend_info = self.get_friend_info(friend_name)
+                # 添加到数据库中
+                # 如果QQ号不存在，则插入QQ好友数据库
+                qq_mumber = friend_info["qq"]
+                if not self.qq_friends.qq_number_exists(qq_mumber):
+                    print_with_color(f"QQ号{qq_mumber}不存在，插入QQ好友数据库", "yellow")
+                    try:
+                        to_save = {
+                            "QQNumber": qq_mumber,
+                            "Nickname": friend_info["nickname"],
+                            "ExploreCondition": self.explore_condition
+                        }
+                        self.extract_friend_info(friend_info["introduction"], to_save)
+                        self.qq_friends.add_friend(to_save)
+                        self.qq_friends.add_friend_detail(qq_mumber, {
+                            "Description": friend_info["introduction"],
+                            "PhotoPath": friend_info["pic_path"]
+                        })
+                    except Exception as e:
+                        print_with_color(f"ERROR: 插入QQ好友数据库失败！{e}", "red")
+                        raise Exception(f"ERROR: 插入QQ好友数据库失败！")
+            except Exception as e:
+                print_with_color(f"ERROR: 获取QQ好友\"{friend_name}\"失败{e}", "red")
                 # back
-                print_with_color("ERROR: 获得QQ好友信息失败！", "red")
                 self.controller.back()
                 time.sleep(1)
-
                 continue
             
             # 如果成功，打印好友信息
@@ -403,12 +452,49 @@ class QQFriendsExplorer:
         print_with_color("OK!", "green")
         return count
 
+    ############################################
+    # 函数：从QQ好友introduction中提取出Gender, Age, Location, FromLocation, RemarkName等信息
+    # @param introduction: QQ好友introduction，如：text: 女 女 | 21岁 | 7月21日 巨蟹座 | 北京大学 | 现居广西 \n南宁 | 来自广西百色 | 学生
+    # @intro_dict: 提取出的信息，函数会修改intro_dict
+    def extract_friend_info(self, introduction, intro_dict):
+        # 从introduction中提取出Gender, Age, Location, FromLocation, RemarkName等信息
+        # 如：text: 女 女 | 21岁 | 7月21日 巨蟹座 | 北京大学 | 现居广西 \n南宁 | 来自广西百色 | 学生
+        # 提取出：Gender: 女, Age: 21, Location: 北京大学, FromLocation: 广西南宁, RemarkName: 学生
+        # 如果提取不到，则不修改intro_dict
+
+        # 提取性别
+        gender_match = re.search(r"(\男|女)", introduction)
+        if gender_match:
+            intro_dict["Gender"] = gender_match.group(1)
+
+        # 提取年龄
+        age_match = re.search(r"(\d+)岁", introduction)
+        if age_match:
+            intro_dict["Age"] = int(age_match.group(1))
+
+        # 提取当前居住地
+        location_match = re.search(r"现居(.*?)\|", introduction)
+        if location_match:
+            intro_dict["Location"] = location_match.group(1).strip()
+
+        # 提取来源地
+        from_location_match = re.search(r"来自(.*?)\|", introduction)
+        if from_location_match:
+            intro_dict["FromLocation"] = from_location_match.group(1).strip()
+
+        # 提取备注名称
+        remark_match = re.search(r"个性签名：(.*?)\n", introduction)
+        if remark_match:
+            intro_dict["RemarkName"] = remark_match.group(1).strip()
+
         
     ############################################
     # 函数：开始探索QQ好友信息
     def start_exploring(self):
         # 点击查询QQ好友列表
         self.query_qq_friends()
+        # 休息1秒等待页面加载完成
+        time.sleep(1)
         # 循环获取下一个橱窗的好友信息
         while(True):
             # 获取当前橱窗的好友信息
@@ -433,7 +519,7 @@ class QQFriendsExplorer:
         time.sleep(1)
 
 
-
+# 函数：^C信号处理函数
 def signal_handler(sig, frame):
     print_with_color("You pressed ^C, Exit!", "blue")
     sys.exit(0)
@@ -461,11 +547,20 @@ if __name__ == "__main__":
         os.mkdir(job_dir)
 
     # 获得QQ好友信息
-    qq_friends_explorer = QQFriendsExplorer(device_name, job_dir)
-    # 循环3次
-    for i in range(3):
+    explore_condition = "女|18-26岁|所在地:广西-南宁-兴宁区"
+    qq_friends_explorer = QQFriendsExplorer(device_name, job_dir, explore_condition)
+    print_with_color("=======================================================", "yellow")
+    print_with_color(f"开始探索QQ好友信息, 查询条件: {explore_condition}", "yellow")
+    print_with_color("=======================================================", "yellow")
+    # 循环max_try_times次
+    max_try_times = 10
+    for i in range(max_try_times):
         qq_friends_explorer.start_exploring()
         qq_friends_explorer.reset_explored_friends()
+        # 如果尝试获取的QQ大多数已经存在数据库中，则退出
+        if qq_friends_explorer.get_try_friend_repetitive_count() > 100:
+            print_with_color(f"尝试获取的QQ大多数已经存在数据库中，退出", "yellow")
+            break
         print_with_color(f"第{i+1}轮探索完成，休息3秒", "yellow")
         time.sleep(3)
     

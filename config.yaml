@@ -13,6 +13,10 @@ MAX_ROUNDS: 20  # Set the round limit for the agent to complete the task
 DARK_MODE: false  # Set this to true if your app is in dark mode to enhance the element labeling
 MIN_DIST: 30  # The minimum distance between elements to prevent overlapping during the labeling process
 
+# 数据库连接定义，MariaDB
+DB_CONN: "mariadb://root:123456@localhost:3306/qq_friends"
+
+# OPENAI用的代理，如果你的网络需要代理才能访问OPENAI，可以在这里设置
 PROXY:
   HTTP_PROXY: "socks5h://127.0.0.1:1090"
   HTTPS_PROXY: "socks5h://127.0.0.1:1090"
