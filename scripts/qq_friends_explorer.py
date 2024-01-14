@@ -81,6 +81,11 @@ class QQFriendsExplorer:
             # 查找text为“查找”的元素
             elem_list = []
             self.find_elements(xml_path, elem_list, attrib, conditions)
+            # 删除xml文件
+            try:
+                os.remove(xml_path)
+            except:
+                print_with_color(f"ERROR: 删除xml文件失败！{xml_path}", "red")
             if not elem_list:
                 print_with_color("ERROR: No element found!", "red")
                 return False
@@ -158,6 +163,81 @@ class QQFriendsExplorer:
                     if text not in content_list:
                         content_list.append(text)
         return content_list
+    
+    ############################################
+    # 函数：读取页面的文本
+    # @param attrib: 元素属性, 如resource-id\text\content-desc等
+    # @param conditions: 元素属性值
+    # @param content_list: 文本列表
+    # @return: 文本列表
+    def read_page_text(self, content_list):
+        # 获得xml
+        xml_path = self.read_xml()
+        if xml_path == "ERROR":
+            print_with_color("ERROR: 读取xml失败！", "red")
+            return content_list
+
+        # 读取全部文本信息
+        try:
+            self.read_text(xml_path, content_list)
+            try:
+                # 删除xml文件
+                os.remove(xml_path)
+            except:
+                print_with_color(f"ERROR: 删除xml文件失败！{xml_path}", "red")
+        except:
+            print_with_color("ERROR: 读取文本信息失败！", "red")
+
+        return content_list
+    
+    ############################################
+    # 函数：读取满足条件的元素的文本
+    # @param attrib: 元素属性, 如resource-id\text\content-desc等
+    # @param conditions: 元素属性值
+    # @param content_list: 文本列表
+    # @return: 文本列表
+    def read_element_text(self, attrib, conditions, content_list):
+        # 获得xml
+        xml_path = self.read_xml()
+        if xml_path == "ERROR":
+            print_with_color("ERROR: 读取xml失败！", "red")
+            return content_list
+
+        # 查找text为“查找”的元素
+        elem_list = []
+        self.find_elements(xml_path, elem_list, attrib, conditions)
+        if not elem_list:
+            try:
+                # 删除xml文件
+                os.remove(xml_path)
+            except:
+                print_with_color(f"ERROR: 删除xml文件失败！{xml_path}", "red")
+
+            print_with_color("ERROR: No element found!", "red")
+            return content_list
+        
+        # 读取全部文本信息
+        try:
+            for elem in elem_list:
+                if elem.attrib.get("content-desc"):
+                    # 如果content_list中存在相同的content-desc，则不添加
+                    content_desc = f"content-desc: {elem.attrib['content-desc']}\n"
+                    if content_desc not in content_list:
+                        content_list.append(content_desc)
+                if elem.attrib.get("text"):
+                    # 如果content_list中存在相同的content-desc，则不添加
+                    text = f"text: {elem.attrib['text']}\n"
+                    if text not in content_list:
+                        content_list.append(text)
+            try:
+                # 删除xml文件
+                os.remove(xml_path)
+            except:
+                print_with_color(f"ERROR: 删除xml文件失败！{xml_path}", "red")
+        except:
+            print_with_color("ERROR: 读取文本信息失败！", "red")
+
+        return content_list
 
     ############################################
     # 函数：读取指定元素的图片
@@ -165,7 +245,7 @@ class QQFriendsExplorer:
     # @param save_path: 保存路径
     # @param prefix: 图片名称前缀
     # @return: 图片的image
-    def read_element_image(self, elem, prefix, save_path):
+    def read_element_image2(self, elem, prefix, save_path):
         x1, y1, x2, y2 = self.get_element_bbox(elem)
         # 截取图片
         png_on_local = self.controller.get_screenshot(prefix, save_path)
@@ -186,13 +266,7 @@ class QQFriendsExplorer:
         print_with_color(f"图片保存到: {png_on_local}", "yellow")
         return image
         
-    ############################################
-    # 函数：点击查询QQ好友列表
-    # @return: 点击成功返回True，否则返回False
-    def query_qq_friends(self):
-        self.step += 1
-        print_with_color(f"Step {self.step}: 点击查询QQ好友列表", "blue")
-
+    def read_element_image(self, attrib, conditions, prefix, save_path):
         # 获得xml
         xml_path = self.read_xml()
         if xml_path == "ERROR":
@@ -201,16 +275,34 @@ class QQFriendsExplorer:
 
         # 查找text为“查找”的元素
         elem_list = []
-        self.find_elements(xml_path, elem_list, "text", "查找")
+        self.find_elements(xml_path, elem_list, attrib, conditions)
+        try:
+            # 删除xml文件
+            os.remove(xml_path)
+        except:
+            print_with_color(f"ERROR: 删除xml文件失败！{xml_path}", "red")
         if not elem_list:
             print_with_color("ERROR: No element found!", "red")
-            return
+            return False
         
+        # 读取图片
+        image = self.read_element_image2(elem_list[0], prefix, save_path)
+        if isinstance(image, bool) and image == False:
+            print_with_color("ERROR: 读取图片失败！", "red")
+            return False
+        return image
+    
+    ############################################
+    # 函数：点击查询QQ好友列表
+    # @return: 点击成功返回True，否则返回False
+    def query_qq_friends(self):
+        self.step += 1
+        print_with_color(f"Step {self.step}: 点击查询QQ好友列表", "blue")
         # 点击查找按钮
-        search_btn = elem_list[0]
-        x,y = self.get_element_center(search_btn)
-        print_with_color(f"点击查找按钮：{x}, {y}", "yellow")
-        ret = self.controller.tap(x, y)
+        ret = self.tap_element("text", "查找")
+        if not ret:
+            print_with_color("ERROR: 点击查找按钮失败！", "red")
+            return False
 
         print_with_color("OK!", "green")
         return True
@@ -233,6 +325,12 @@ class QQFriendsExplorer:
         
         # 搜索resource-id="com.tencent.mobileqq:id/f9r"的元素列表
         self.find_elements(xml_path, friend_elem_list, "resource-id", "com.tencent.mobileqq:id/f9r")
+        try:
+            # 删除xml文件
+            os.remove(xml_path)
+        except:
+            print_with_color(f"ERROR: 删除xml文件失败！{xml_path}", "red")
+
         if not friend_elem_list:
             print_with_color("ERROR: No element found!", "red")
             return
@@ -250,6 +348,10 @@ class QQFriendsExplorer:
         # 返回待探索的好友列表
         return friend_list
 
+    ############################################
+    # 函数：从文本列表中找到QQ号
+    # @param content_list: 文本列表
+    # @return: QQ号
     def find_qq_number_from_content_list(self, content_list):
         for content in content_list:
             if "QQ号" in content:
@@ -263,6 +365,9 @@ class QQFriendsExplorer:
                     return qq_num
         return ""
     
+    ############################################
+    # 函数：如果QQ号已经在数据库中存在，则抛出异常
+    # @param qq_num: QQ号
     def raise_if_qq_number_exists(self, qq_num):
         if self.qq_friends.qq_number_exists(qq_num):
             print_with_color(f"QQ号{qq_num}已经存在数据库中，跳过", "yellow")
@@ -287,23 +392,20 @@ class QQFriendsExplorer:
         cycle = 0
         content_list = []
         qq_num = ""
+        is_checked = False
         while(cycle < 3):
-            # 获得xml
-            xml_path = self.read_xml()
-            if xml_path == "ERROR":
-                print_with_color("ERROR: 读取xml失败！", "red")
-                raise Exception("ERROR: 读取xml失败！")
             # 读取全部文本信息
             try:
-                self.read_text(xml_path, content_list)
+                self.read_page_text(content_list)
                 if not qq_num:
                     qq_num = self.find_qq_number_from_content_list(content_list)
             except:
                 print_with_color("ERROR: 读取文本信息失败！", "red")
                 raise Exception("ERROR: 读取文本信息失败！")
             
-            if qq_num:
+            if qq_num and not is_checked:
                 self.raise_if_qq_number_exists(qq_num)
+                is_checked = True
 
             # 往下翻动页面，看是不是能找到更多信息
             self.controller.swipe(x, y, "up", "long", False)
@@ -344,48 +446,18 @@ class QQFriendsExplorer:
     # @return: 图片的存储路径
     def get_friend_avatar(self, friend_nickname, qq_num):
         print_with_color(f"正在读取好友\"{friend_nickname}\"(QQ:{qq_num})的头像", "yellow")
-        # 重新读取xml
-        xml_path = self.read_xml()
-        if xml_path == "ERROR":
-            print_with_color("ERROR: 读取xml失败！", "red")
-            return
-
-        # 获取查看大头像 elment_id=com.tencent.mobileqq:id/dk3 的元素
-        elem_list = []
-        self.find_elements(xml_path, elem_list, "resource-id", "com.tencent.mobileqq:id/dk3")
-        if not elem_list:
-            time.sleep(1)
-            print_with_color("ERROR: No element found!", "red")
-            return
-        
-        # 获得元素x, y坐标
-        x, y = self.get_element_center(elem_list[0])
         # 点击查看大头像
-        print_with_color(f"点击查看大头像：{x}, {y}", "yellow")
-        ret = self.controller.tap(x, y)
+        ret = self.tap_element("resource-id", "com.tencent.mobileqq:id/dk3")
         if ret == "ERROR":
             print_with_color("ERROR: 点击查看大头像失败！", "red")
             return
         # 休息1秒等待页面加载完成
         time.sleep(1)
 
-        try:
-            # 获得xml
-            xml_path = self.read_xml()
-            if xml_path == "ERROR":
-                print_with_color("ERROR: 读取xml失败！", "red")
-                raise Exception("ERROR: 读取xml失败！")
-                
-            # 查找resource-id="com.tencent.mobileqq:id/image"的元素列表
-            elem_list = []
-            self.find_elements(xml_path, elem_list, "resource-id", "com.tencent.mobileqq:id/image")
-            if not elem_list:
-                print_with_color("ERROR: No element found!", "red")
-                raise Exception("ERROR: No element found!")
-            
+        try:            
             # 读取图片
             prefix = f"{qq_num}"
-            image = self.read_element_image(elem_list[0], prefix, self.png_save_dir)
+            image = self.read_element_image("resource-id", "com.tencent.mobileqq:id/image", prefix, self.png_save_dir)
             if isinstance(image, bool) and image == False:
                 print_with_color("ERROR: 读取图片失败！", "red")
                 raise Exception("ERROR: 读取图片失败！")
@@ -399,8 +471,8 @@ class QQFriendsExplorer:
             time.sleep(1)
 
             return f"{self.png_save_dir}/{qq_num}.png"
-        except:
-            print_with_color("ERROR: 读取大头帖失败！", "red")
+        except Exception as e:
+            print_with_color(f"ERROR: 读取大头帖失败！{e}", "red")
             # 返回
             self.controller.back()
             time.sleep(1)
