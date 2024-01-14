@@ -63,6 +63,16 @@ class QQFriendsExplorer:
         self.explored_friends_info = []
 
     ############################################
+    # 函数：获得已经探索过的好友列表
+    def get_explored_friends(self):
+        return self.explored_friends
+    
+    ############################################
+    # 函数：获得已经探索过的好友信息列表
+    def get_explored_friends_info(self):
+        return self.explored_friends_info
+    
+    ############################################
     # 函数：获得尝试获取已经存在数据库中的QQ好友的次数
     def get_try_friend_repetitive_count(self):
         return self.try_get_friend_count
@@ -644,18 +654,29 @@ class QQFriendsExplorer:
       
     ############################################
     # 函数：开始探索QQ好友信息
+    # @return: 返回成功开拓的好友数量
     def start_exploring(self):
         # 点击查询QQ好友列表
         self.query_qq_friends()
         # 休息1秒等待页面加载完成
         time.sleep(1)
         # 循环获取下一个橱窗的好友信息
+
+        # 当前橱窗序号
+        window_index = 0
         while(True):
             # 获取当前橱窗的好友信息
             count = self.get_current_window_friend_info()
             if count == 0:
                 time.sleep(1)
-                break
+                if window_index >= 5:
+                    print_with_color("ERROR: 本次探索没有成功开拓的好友，退出！", "red")
+                    break
+                else:
+                    window_index += 1
+                    continue
+            else:
+                window_index += 1
 
             # 翻动页面(quickly)
             print_with_color(f"翻动页面，继续探索下一个橱窗的好友信息", "yellow")
@@ -671,6 +692,9 @@ class QQFriendsExplorer:
         print_with_color("探索完成！", "green")
         self.controller.back()
         time.sleep(1)
+
+        # 返回成功开拓的好友数量
+        return len(self.explored_friends)
 
 
 # 函数：^C信号处理函数
@@ -729,7 +753,13 @@ if __name__ == "__main__":
             time.sleep(sleep_time)
             continue
         time.sleep(5)
-        qq_friends_explorer.start_exploring()
+        explored_count = qq_friends_explorer.start_exploring()
+        print_with_color(f"本次探索成功开拓的好友数量: {explored_count}", "yellow")
+        if explored_count == 0:
+            # 立刻开始下一轮探索
+            continue
+
+        # 重置已经探索过的好友列表
         qq_friends_explorer.reset_explored_friends()
         # 如果尝试获取的QQ大多数已经存在数据库中，则退出
         if qq_friends_explorer.get_try_friend_repetitive_count() > max_try_times:
