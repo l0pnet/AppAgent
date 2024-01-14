@@ -62,6 +62,8 @@ class QQFriendsExplorer:
         self.explored_friends = []
         self.explored_friends_info = []
 
+    ############################################
+    # 函数：获得尝试获取已经存在数据库中的QQ好友的次数
     def get_try_friend_repetitive_count(self):
         return self.try_get_friend_count
 
@@ -265,7 +267,14 @@ class QQFriendsExplorer:
             return False
         print_with_color(f"图片保存到: {png_on_local}", "yellow")
         return image
-        
+    
+    ############################################
+    # 函数：读取指定元素的图片
+    # @param attrib: 元素属性, 如resource-id\text\content-desc等
+    # @param conditions: 元素属性值
+    # @param prefix: 图片名称前缀
+    # @param save_path: 保存路径
+    # @return: 图片的image
     def read_element_image(self, attrib, conditions, prefix, save_path):
         # 获得xml
         xml_path = self.read_xml()
@@ -632,8 +641,7 @@ class QQFriendsExplorer:
         remark_match = re.search(r"个性签名：(.*?)\n", introduction)
         if remark_match:
             intro_dict["RemarkName"] = remark_match.group(1).strip()
-
-        
+      
     ############################################
     # 函数：开始探索QQ好友信息
     def start_exploring(self):
