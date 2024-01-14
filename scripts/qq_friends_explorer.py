@@ -668,14 +668,14 @@ class QQFriendsExplorer:
             # 获取当前橱窗的好友信息
             count = self.get_current_window_friend_info()
             if count == 0:
-                time.sleep(1)
                 if window_index >= 5:
                     print_with_color("ERROR: 本次探索没有成功开拓的好友，退出！", "red")
                     break
 
             # 橱窗序号+1
             window_index += 1
-
+            time.sleep(1)
+            
             # 翻动页面(quickly)
             print_with_color(f"翻动页面，继续探索下一个橱窗的好友信息", "yellow")
             width, height = self.controller.get_device_size()
