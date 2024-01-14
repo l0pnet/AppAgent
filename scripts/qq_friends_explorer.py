@@ -672,11 +672,9 @@ class QQFriendsExplorer:
                 if window_index >= 5:
                     print_with_color("ERROR: 本次探索没有成功开拓的好友，退出！", "red")
                     break
-                else:
-                    window_index += 1
-                    continue
-            else:
-                window_index += 1
+
+            # 橱窗序号+1
+            window_index += 1
 
             # 翻动页面(quickly)
             print_with_color(f"翻动页面，继续探索下一个橱窗的好友信息", "yellow")
