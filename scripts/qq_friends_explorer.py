@@ -668,7 +668,8 @@ class QQFriendsExplorer:
             # 获取当前橱窗的好友信息
             count = self.get_current_window_friend_info()
             if count == 0:
-                if window_index >= 5:
+                if window_index >= 2:
+                    # 两个橱窗都是空的，则退出
                     print_with_color("ERROR: 本次探索没有成功开拓的好友，退出！", "red")
                     break
 
