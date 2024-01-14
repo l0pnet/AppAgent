@@ -745,23 +745,31 @@ if __name__ == "__main__":
     # 循环max_try_times次
     max_try_times = 300
     sleep_time = 30
+    need_init = True
     for i in range(max_try_times):
-        if not qq_friends_explorer.init_to_find_qq_friends():
-            # 如果初始化失败，则休息一段时间后重试
-            time.sleep(sleep_time)
-            continue
-        time.sleep(5)
-        explored_count = qq_friends_explorer.start_exploring()
-        print_with_color(f"本次探索成功开拓的好友数量: {explored_count}", "yellow")
-        if explored_count == 0:
-            # 立刻开始下一轮探索
-            continue
-
-        # 重置已经探索过的好友列表
-        qq_friends_explorer.reset_explored_friends()
         # 如果尝试获取的QQ大多数已经存在数据库中，则退出
         if qq_friends_explorer.get_try_friend_repetitive_count() > max_try_times:
             print_with_color(f"尝试获取的QQ大多数已经存在数据库中，退出", "yellow")
             break
+
+        # 如果初始化失败，则休息一段时间后重试
+        if need_init and not qq_friends_explorer.init_to_find_qq_friends():
+            # 如果初始化失败，则休息一段时间后重试
+            time.sleep(sleep_time)
+            continue
+        
+        # 等待初始化完成
+        time.sleep(3)
+        explored_count = qq_friends_explorer.start_exploring()
+        print_with_color(f"本次探索成功开拓的好友数量: {explored_count}", "yellow")
+        if explored_count == 0:
+            # 立刻开始下一轮探索
+            need_init = False
+            continue
+
+        need_init = True
+        # 重置已经探索过的好友列表
+        qq_friends_explorer.reset_explored_friends()
+
         print_with_color(f"第{i+1}轮探索完成，休息{sleep_time}秒", "yellow")
         time.sleep(sleep_time)
