@@ -692,7 +692,7 @@ class QQFriendsExplorer:
         time.sleep(1)
 
         # 返回成功开拓的好友数量
-        return len(self.explored_friends)
+        return len(self.explored_friends_info)
 
 
 # 函数：^C信号处理函数
