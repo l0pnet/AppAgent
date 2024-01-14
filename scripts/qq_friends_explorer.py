@@ -679,6 +679,21 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 if __name__ == "__main__":
+    # 支持输入参数 -m 表示探索QQ好友的查询条件
+    # 例如：python scripts/qq_friends_explorer.py -m "女|18-26岁|所在地:广西-南宁-武鸣县"
+    explore_condition = ""
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "-m":
+            explore_condition = sys.argv[2]
+        # 打印帮助信息
+        else:
+            print_with_color("Usage: python scripts/qq_friends_explorer.py -m \"女|18-26岁|所在地:广西-南宁-武鸣县\"", "blue")
+
+    if not explore_condition:
+        # 提示输入查询条件
+        print_with_color("请输入查询条件:", "blue")
+        explore_condition = input()
+
     # 订阅^C信号
     signal.signal(signal.SIGINT, signal_handler)
     # 获得设备名称
@@ -701,7 +716,6 @@ if __name__ == "__main__":
         os.mkdir(job_dir)
 
     # 获得QQ好友信息
-    explore_condition = "女|18-26岁|所在地:广西-南宁-武鸣县"
     qq_friends_explorer = QQFriendsExplorer(device_name, job_dir, explore_condition)
     print_with_color("=======================================================", "yellow")
     print_with_color(f"开始探索QQ好友信息, 查询条件: {explore_condition}", "yellow")
