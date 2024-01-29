@@ -657,7 +657,11 @@ class QQFriendsExplorer:
     # @return: 返回成功开拓的好友数量
     def start_exploring(self):
         # 点击查询QQ好友列表
-        self.query_qq_friends()
+        ret = self.query_qq_friends()
+        if (ret == False):
+            # 此时需要重新初始化
+            raise Exception("ERROR: 点击查询QQ好友列表失败！")
+        
         # 休息1秒等待页面加载完成
         time.sleep(1)
         # 循环获取下一个橱窗的好友信息
@@ -744,8 +748,8 @@ if __name__ == "__main__":
     print_with_color(f"开始探索QQ好友信息, 查询条件: {explore_condition}", "yellow")
     print_with_color("=======================================================", "yellow")
     # 循环max_try_times次
-    max_try_times = 300
-    sleep_time = 30
+    max_try_times = 3000
+    sleep_time = 100
     need_init = True
     for i in range(max_try_times):
         # 如果尝试获取的QQ大多数已经存在数据库中，则退出
@@ -761,7 +765,13 @@ if __name__ == "__main__":
         
         # 等待初始化完成
         time.sleep(3)
-        explored_count = qq_friends_explorer.start_exploring()
+        try:
+            explored_count = qq_friends_explorer.start_exploring()
+        except Exception as e:
+            print_with_color(f"ERROR: 执行探索过程异常，需要重新初始化", "red")
+            need_init = True
+            continue
+
         print_with_color(f"本次探索成功开拓的好友数量: {explored_count}", "yellow")
         if explored_count == 0:
             # 立刻开始下一轮探索
