@@ -57,6 +57,12 @@ class QQFriendsExplorer:
         self.explore_condition = explore_condition
 
     ############################################
+    # 函数：获得新增探索的好友
+    # @return: 新增探索的好友
+    def get_new_explored_friends(self):
+        return self.qq_friends
+
+    ############################################
     # 函数：重置已经探索过的好友列表
     def reset_explored_friends(self):
         self.explored_friends = []
@@ -749,7 +755,7 @@ if __name__ == "__main__":
     print_with_color("=======================================================", "yellow")
     # 循环max_try_times次
     max_try_times = 3000
-    sleep_time = 100
+    sleep_time = 60
     need_init = True
     for i in range(max_try_times):
         # 如果尝试获取的QQ大多数已经存在数据库中，则退出
@@ -769,6 +775,7 @@ if __name__ == "__main__":
             explored_count = qq_friends_explorer.start_exploring()
         except Exception as e:
             print_with_color(f"ERROR: 执行探索过程异常，需要重新初始化", "red")
+            time.sleep(sleep_time)
             need_init = True
             continue
 
